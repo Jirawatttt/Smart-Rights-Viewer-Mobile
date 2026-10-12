@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Rights Viewer</title>
+  <link rel="icon" type="image/png" href="logo.png" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#1B3A6B" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Smart Rights" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* กล่องเนื้อหาหลักของหน้า จำกัดความกว้างสูงสุดและจัดกึ่งกลางจอ */
+    .content-area {
+      flex: 1;
+      padding: 28px 32px 36px;
+      max-width: 900px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* ── Progress Steps ─────────────────────────────────────── */
+    /* แถบแสดงขั้นตอนด้านบน (เริ่มต้น/กรอกข้อมูล/ดูผลลัพธ์) มี 3 สถานะ: ปกติ, active (ขั้นปัจจุบัน), done (ผ่านแล้ว) */
+    .progress-steps {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin-bottom: 28px;
+    }
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      position: relative;
+    }
+    .step-circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 700;
+      border: 2px solid var(--border);
+      background: #fff;
+      color: var(--text-muted);
+      transition: all 0.3s;
+    }
+    .step.active .step-circle {
+      background: var(--navy);
+      border-color: var(--navy);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(27,58,107,0.3);
+    }
+    .step.done .step-circle {
+      background: #1D9E75;
+      border-color: #1D9E75;
+      color: #fff;
+    }
+    .step-label {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .step.active .step-label { color: var(--navy); font-weight: 700; }
+    .step.done  .step-label  { color: #1D9E75; }
+
+    .step-line {
+      flex: 1;
+      height: 2px;
+      background: var(--border);
+      margin: 0 8px;
+      margin-bottom: 22px;
+      max-width: 80px;
+    }
+
+    /* ── Form ───────────────────────────────────────────────── */
+    /* สไตล์ label, input, textarea ของฟอร์มกรอกข้อมูล รวมสถานะ focus / filled / invalid */
+    .form-label-th {
+      font-size: 0.85rem;
+      color: var(--text-sub);
+      margin-bottom: 7px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .form-control {
+      border-radius: 8px;
+      border: 1.5px solid var(--border);
+      background: #fff;
+      color: var(--text-main);
+      font-family: 'Sarabun', sans-serif;
+      font-size: 0.95rem;
+      padding: 10px 14px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 100%;
+    }
+    .form-control:focus {
+      background: #fff;
+      border-color: var(--navy-light);
+      box-shadow: 0 0 0 3px rgba(35,80,160,0.12);
+      outline: none;
+    }
+    .form-control::placeholder { color: #bbb; }
+
+    .profile-textarea {
+      min-height: 190px;
+      resize: vertical;
+      line-height: 1.65;
+    }
+    .form-control.filled {
+      border-color: #1D9E75;
+      background: #F6FDF9;
+    }
+
+    .form-control.is-invalid {
+      border-color: #dc3545;
+      background: #FFF5F5;
+    }
+    .error-msg {
+      font-size: 0.8rem;
+      color: #dc3545;
+      margin-top: 4px;
+      display: none;
+    }
+    .error-msg.show { display: block; }
+
+    /* ── AI Input Assistant suggestion ── */
+    /* กล่องคำแนะนำ (ไอคอนหลอดไฟ) ที่โผล่มาเมื่อ AI แนะนำให้เติมข้อมูลเพิ่ม ซ่อนอยู่จนกว่าจะเติม class .show */
+    .input-suggestion {
+      display: none;
+      margin-top: 12px;
+      padding: 12px 14px 12px 34px;
+      background: #F4F8FF;
+      border: 1px solid rgba(35,80,160,0.25);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: var(--text-sub);
+      line-height: 1.6;
+      position: relative;
+    }
+    .input-suggestion.show {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding-left: 14px;
+      animation: sugg-fade-in 0.25s ease;
+    }
+    .input-suggestion .sugg-icon {
+      flex: 0 0 auto;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      margin-top: 1px;
+    }
+    .input-suggestion .sugg-text { flex: 1 1 auto; }
+
+    /* สถานะ "กำลังวิเคราะห์..." ระหว่างรอ AI Input Assistant ตอบกลับ */
+    .input-suggestion.analyzing-mode {
+      color: var(--text-muted);
+      font-style: italic;
+    }
+    .spinner-dot {
+      display: inline-block;
+      width: 13px;
+      height: 13px;
+      border: 2px solid rgba(35,80,160,0.2);
+      border-top-color: var(--navy-light, #2350A0);
+      border-radius: 50%;
+      animation: sugg-spin 0.7s linear infinite;
+      vertical-align: -2px;
+    }
+    @keyframes sugg-spin { to { transform: rotate(360deg); } }
+    @keyframes sugg-fade-in {
+      from { opacity: 0; transform: translateY(-3px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ข้อความคำแนะนำถาวรใต้ช่องกรอก บอกวิธีใช้งาน AI Input Assistant */
+    .ai-hint {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* โลโก้ในแถบ header สีขาว (invert ไอคอนให้เข้ากับพื้นหลังสีกรมท่า) */
+    .header-logo {
+      width: 36px; height: 36px;
+      object-fit: contain;
+      filter: brightness(0) invert(1);
+    }
+
+    /* ── Dashboard ───────────────────────────────────────────── */
+    /* กรอบส่วนแดชบอร์ดสถิติด้านล่างฟอร์ม (การ์ดตัวเลข + กราฟแท่ง + กราฟวงกลม) */
+    .dashboard-section {
+      margin-top: 36px;
+      padding-top: 28px;
+      border-top: 2px solid var(--border);
+    }
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 16px;
+    }
+    .dash-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(27,58,107,0.07);
+    }
+    .dash-card-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--navy);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .dash-card-title::before {
+      content: '';
+      width: 3px; height: 14px;
+      background: var(--gold);
+      border-radius: 2px;
+    }
+    .stat-row { display: flex; gap: 12px; }
+    .stat-box {
+      flex: 1;
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 14px 10px;
+      text-align: center;
+    }
+    .stat-box-value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--navy);
+      line-height: 1.1;
+    }
+    .stat-box-label {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+    /* กล่อง placeholder สีเทาวิ่งไล่แสง (shimmer) แสดงระหว่างรอโหลดข้อมูลกราฟ */
+    .dash-skeleton {
+      height: 180px;
+      background: linear-gradient(90deg, #EEF1F6 25%, #E4E9F2 50%, #EEF1F6 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 8px;
+    }
+    @keyframes shimmer {
+      0%  { background-position: 200% 0; }
+      100%{ background-position: -200% 0; }
+    }
+
+    @media (max-width: 576px) {
+      .content-area { padding: 20px 16px; }
+      .step-line { max-width: 40px; }
+      .dashboard-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── Footer actions fix ─────────────────────────────────────
+       จัดปุ่มให้อยู่กึ่งกลางแถบ (เหมือนหน้า result.html ที่ใช้
+       .footer-actions { justify-content: center }) แทนที่จะกองอยู่
+       ชิดซ้ายเหมือนก่อนหน้านี้ ปุ่มเป็นขนาดปกติ ไม่ยืดเต็มความกว้าง ── */
+    .footer-actions {
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="app-header">
+    <a href="index.html">
+      <img src="logo.png" alt="Smart Rights Viewer" class="header-logo" />
+    </a>
+    <h1>กรอกข้อมูลผู้ใช้</h1>
+    <div class="header-spacer"></div>
+  </div>
+
+  <div class="content-area">
+
+    <!-- Progress Steps -->
+    <div class="progress-steps">
+      <div class="step done">
+        <div class="step-circle">✓</div>
+        <div class="step-label">เริ่มต้น</div>
+      </div>
+      <div class="step-line"></div>
+      <div class="step active">
+        <div class="step-circle">2</div>
+        <div class="step-label">กรอกข้อมูล</div>
+      </div>
+      <div class="step-line"></div>
+      <div class="step">
+        <div class="step-circle">3</div>
+        <div class="step-label">ดูผลลัพธ์</div>
+      </div>
+    </div>
+
+    <!-- ช่องกรอกข้อความหลัก: ทุกครั้งที่พิมพ์จะเรียก markFilled (เช็ค valid) และ scheduleInputSuggestion (ขอคำแนะนำจาก AI) -->
+    <div class="section-title">ข้อมูลของคุณ</div>
+    <label class="form-label-th" for="inp-profile-text">พิมพ์ข้อมูลที่ต้องการให้ระบบตรวจสอบ</label>
+    <textarea id="inp-profile-text" class="form-control profile-textarea"
+      placeholder="ตัวอย่าง: อายุ 65 ปี สัญชาติไทย ไม่มีงานทำ ไม่มีประกันสังคม มีบัตรผู้พิการ และมีบุตรอายุ 4 ปี"
+      oninput="markFilled(this); scheduleInputSuggestion(this)"></textarea>
+    <div class="error-msg" id="err-profile-text">กรุณาพิมพ์ข้อมูลอย่างน้อย 1 อย่าง</div>
+    <div class="ai-hint">ผู้ช่วย อัฉริยะ จะช่วยแนะนำข้อมูลเพิ่มเติมให้ท่าน</div>
+    <div class="input-suggestion" id="input-suggestion"></div>
+
+    <!-- ── Dashboard Section ── -->
+    <!-- แดชบอร์ดสถิติ: ตัวเลขและกราฟถูกเติมด้วย JS (loadDashboard ใน input.js) หลังหน้าโหลดเสร็จ -->
+    <div class="dashboard-section" id="dashboard-section">
+      <div class="section-title">สถิติการใช้งานระบบ</div>
+      <div class="dashboard-grid">
+
+        <!-- Stat boxes -->
+        <div class="dash-card">
+          <div class="dash-card-title">ภาพรวมการใช้งาน</div>
+          <div class="stat-row">
+            <div class="stat-box">
+              <div class="stat-box-value" id="stat-total">—</div>
+              <div class="stat-box-label">การตรวจสอบ<br>ทั้งหมด</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-box-value" id="stat-ai">—</div>
+              <div class="stat-box-label">เวลา AI<br>เฉลี่ย (วินาที)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pie chart: benefit categories checked in the main flow -->
+        <div class="dash-card">
+          <div class="dash-card-title">หมวดหมู่สิทธิที่ถูกตรวจสอบ</div>
+          <div id="chart-skeleton-cat" class="dash-skeleton" style="height:220px;"></div>
+          <div style="display:flex; justify-content:center;">
+            <canvas id="categoryChart" style="display:none; max-height:220px;"></canvas>
+          </div>
+        </div>
+
+        <!-- Bar chart -->
+        <div class="dash-card" style="grid-column: 1 / -1;">
+          <div class="dash-card-title">ผลประเมินเบื้องต้น</div>
+          <div id="chart-skeleton" class="dash-skeleton"></div>
+          <canvas id="benefitChart" style="display:none; max-height:180px;"></canvas>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /.content-area -->
+
+  <!-- Footer actions: ปุ่ม "ตรวจสอบสิทธิ" ส่งข้อความไปวิเคราะห์ (submitForm), ปุ่ม "ล้างข้อมูล" เคลียร์ฟอร์ม (clearForm) -->
+  <div class="footer-actions">
+    <button class="btn-action primary" onclick="submitForm()">ตรวจสอบสิทธิ</button>
+    <button class="btn-action secondary" onclick="clearForm()">ล้างข้อมูล</button>
+  </div>
+
+  <script src="app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="input.js"></script>
+
+  <script src="pwa.js"></script>
+</body>
+</html>
