@@ -1,57 +1,48 @@
-# ── Environment / Secrets ──────────────────────────────
+# ============================================================
+# Smart Rights Viewer — Mobile (PWA)
+# ============================================================
+
+# ── 🔐 Android signing (ห้าม push เด็ดขาด) ──────────────────
+*.keystore
+*.jks
+signing-key-info.txt
+key.properties
+
+# ── Android package ที่ได้จาก PWABuilder ───────────────────
+*.apk
+*.aab
+*Google Play package*.zip
+*Google*Play*package*
+
+# ── Environment / secrets ──────────────────────────────────
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 *.pem
 *.key
 
-# ── Python ──────────────────────────────────────────────
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-dist/
-*.egg-info/
-.eggs/
+# ── Node (ถ้าใช้ npx serve หรือเครื่องมืออื่น) ─────────────
+node_modules/
+npm-debug.log*
+yarn-error.log*
+package-lock.json
 
-# Virtual environments
-venv/
-.venv/
-env/
-ENV/
+# ── Cloudflare / Wrangler ──────────────────────────────────
+.wrangler/
+.dev.vars
 
-# ── Testing / Coverage ──────────────────────────────────
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-
-# ── Database (ถ้ามีไฟล์ local เช่น sqlite ตอน dev) ──────
-*.sqlite3
-*.db
-/pgdata/
-
-# ── Logs ─────────────────────────────────────────────────
-*.log
-logs/
-
-# ── IDE / Editor ──────────────────────────────────────────
+# ── Editor / IDE ───────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# ── OS files ──────────────────────────────────────────────
+# ── OS ─────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# ── Node (ถ้ามีใช้ npm สำหรับ build เครื่องมือ frontend ในอนาคต) ──
-node_modules/
-package-lock.json
-
-# ── Misc ───────────────────────────────────────────────────
-*.bak
+# ── Logs / temp / archive ──────────────────────────────────
+*.log
 *.tmp
-.cache/
+*.zip
